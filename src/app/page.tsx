@@ -1,91 +1,95 @@
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from './page.module.css'
+'use client';
 
-const inter = Inter({ subsets: ['latin'] })
+import { useEffect, useState } from 'react';
+import Client from 'socket.io-client';
+import { DiffedMapData, Event, MapIconTypes, WarReport } from 'foxhole-warapi';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import { WarResponse } from 'pages/api/war';
+import styles from './page.module.css';
+
+dayjs.extend(utc);
 
 export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+	const [log, setLog] = useState<Array<string>>([]);
+	const [warInfo, setWarInfo] = useState<WarResponse | undefined>(undefined);
+	useEffect(() => {
+		const socket = Client();
+		async function connect() {
+			await fetch('/api/war/events');
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
+			socket.on('connect', () => {
+				console.log('connected');
+			});
 
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+			socket.on('disconnect', () => {
+				console.log('disconnected');
+				socket.close();
+			});
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
+			socket.on('message', (event: Event, diff: DiffedMapData) => {
+				const str = `[${dayjs.utc().format()}] ${MapIconTypes[diff.old.mapItem.iconType]} @ ${
+					diff.old.mapTextItem.text
+				} ${event?.event} by ${event?.byTeam}`;
+				setLog(current => [...current, str]);
+				console.log(str);
+			});
+		}
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+		connect();
+
+		return () => {
+			socket.close();
+		};
+	}, []);
+
+	useEffect(() => {
+		async function getWarInfo() {
+			const data = (await (await fetch('/api/war')).json()) as WarResponse;
+			console.log(data);
+			setWarInfo(data);
+		}
+
+		getWarInfo();
+	}, []);
+
+	const totals = warInfo
+		? Object.values(warInfo.maps).reduce<Omit<WarReport, 'version'>>(
+				(acc, value) => {
+					acc.totalEnlistments += value.warReport.totalEnlistments;
+					acc.colonialCasualties += value.warReport.colonialCasualties;
+					acc.wardenCasualties += value.warReport.wardenCasualties;
+					acc.dayOfWar = value.warReport.dayOfWar;
+					return acc;
+				},
+				{
+					totalEnlistments: 0,
+					colonialCasualties: 0,
+					wardenCasualties: 0,
+					dayOfWar: 0,
+				}
+		  )
+		: {
+				totalEnlistments: 0,
+				colonialCasualties: 0,
+				wardenCasualties: 0,
+				dayOfWar: 0,
+		  };
+
+	return (
+		<main className={styles.main}>
+			<p>Day of war: {totals.dayOfWar}</p>
+			<p>Total casualties: {totals.colonialCasualties + totals.wardenCasualties}</p>
+			<p>Colonial casualties: {totals.colonialCasualties}</p>
+			<p>Warden casualties: {totals.wardenCasualties}</p>
+			<ul>
+				<li>
+					<strong>Event log</strong>
+				</li>
+				{log.map(item => (
+					<li key={item}>{item}</li>
+				))}
+			</ul>
+		</main>
+	);
 }

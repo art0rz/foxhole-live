@@ -13,11 +13,28 @@
     "@types/node": "18.14.1",
     "@types/react": "18.0.28",
     "@types/react-dom": "18.0.11",
+    "bufferutil": "^4.0.7",
+    "dayjs": "^1.11.7",
     "eslint": "8.34.0",
     "eslint-config-next": "13.1.6",
+    "foxhole-warapi": "^1.5.8",
     "next": "13.1.6",
+    "node-fetch": "^3.3.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "typescript": "4.9.5"
+    "socket.io": "^4.6.1",
+    "socket.io-client": "^4.6.1",
+    "typescript": "4.9.5",
+    "utf-8-validate": "^5.0.10"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.53.0",
+    "@typescript-eslint/parser": "^5.53.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-absolute-imports-only": "^1.0.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.8.4"
   }
 }
